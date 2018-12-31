@@ -1,8 +1,11 @@
 #include <TimeLib.h>
-//#include "U8glib.h"
-//U8GLIB_SH1106_128X64 u8g(U8G_I2C_OPT_NONE);  // I2C / TWI 
-float soil =0;
+#include <VirtualWire.h>
 
+double tdsValue,distance,timestamp;
+double sensorArray[3] = {};
+const int receive_pin = 11;
+
+float soil =0;
 //define relays 
 int no1=2;
 int no2=3;
@@ -35,6 +38,10 @@ digitalWrite(nc1, HIGH);
 lcd.init();
 lcd.backlight();
 
+vw_set_rx_pin(receive_pin);
+vw_set_ptt_inverted(true);
+vw_setup(2000);
+vw_rx_start();
 }
 void loop() {
   nowtime = now()+27000;
@@ -61,10 +68,26 @@ Serial.println(nowtime);
 Serial.print("starttime:  ");
 Serial.println(starttime);
 delay(2000);
- /* u8g.firstPage();  
-  do {
-    draw();
-  } while( u8g.nextPage() );*/
+    uint8_t buf[VW_MAX_MESSAGE_LEN];
+  uint8_t buflen = VW_MAX_MESSAGE_LEN;
+  // Non-blocking
+  if (vw_get_message(buf, &buflen))
+  {
+    memcpy(sensorArray, buf, buflen);
+    digitalWrite(13, true);
+   tdsValue= sensorArray[0];// == x;
+   distance= sensorArray[1]; //== y;
+   timestamp = sensorArray[2]; 
+    Serial.print("X: ");
+    Serial.println(tdsValue);
+    Serial.print("Y: ");
+    Serial.println(distance);
+    Serial.print("z: ");
+    Serial.println(timestamp);
+    // Turn off light to and await next message
+    digitalWrite(13, false);
+  }
+  
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("Now: ");
